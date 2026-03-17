@@ -7,20 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Category extends Model
+class Group extends Model
 {
     use HasFactory;
 
     /**
      * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
-        'icon_key',
-        'color',
-        'group_id',
         'user_id',
         'sort_order',
+        'icon_key',
     ];
 
     protected $casts = [
@@ -28,7 +28,7 @@ class Category extends Model
     ];
 
     /**
-     * Get the user that owns the category.
+     * Get the user that owns the group.
      */
     public function user(): BelongsTo
     {
@@ -36,15 +36,15 @@ class Category extends Model
     }
 
     /**
-     * Get the group that this category belongs to.
+     * Get the categories for the group.
      */
-    public function group(): BelongsTo
+    public function categories(): HasMany
     {
-        return $this->belongsTo(Group::class);
+        return $this->hasMany(Category::class);
     }
 
     /**
-     * Get the transactions for the category.
+     * Get the transactions for the group.
      */
     public function transactions(): HasMany
     {

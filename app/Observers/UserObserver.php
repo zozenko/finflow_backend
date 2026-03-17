@@ -11,12 +11,49 @@ class UserObserver
      */
     public function created(User $user): void
     {
+        // Спершу створюємо дефолтну групу, бо категорії прив'язані до неї
+        $defaultGroup = $user->groups()->create([
+            'name' => 'Default',
+            'icon_key' => 'folder',
+            'color' => '#CCCCCC'
+        ]);
+
         $defaultCategories = [
-            ['name' => 'Food', 'icon' => '🍕', 'color' => '#FF5733'],
-            ['name' => 'Transport', 'icon' => '🚌', 'color' => '#33B5FF'],
-            ['name' => 'Salary', 'icon' => '💰', 'color' => '#2ECC71'],
-            ['name' => 'Entertainment', 'icon' => '🎮', 'color' => '#9B59B6'],
-            ['name' => 'Shopping', 'icon' => '🛍️', 'color' => '#F1C40F'],
+            [
+                'name' => 'Food',
+                'icon_key' => 'food',
+                'color' => '#FF5733',
+                'group_id' => $defaultGroup->id,
+                'sort_order' => 1
+            ],
+            [
+                'name' => 'Pets',
+                'icon_key' => 'pets',
+                'color' => '#FFC300',
+                'group_id' => $defaultGroup->id,
+                'sort_order' => 2
+            ],
+            [
+                'name' => 'Family',
+                'icon_key' => 'family',
+                'color' => '#DAF7A6',
+                'group_id' => $defaultGroup->id,
+                'sort_order' => 3
+            ],
+            [
+                'name' => 'Salary',
+                'icon_key' => 'cash',
+                'color' => '#2ECC71',
+                'group_id' => $defaultGroup->id,
+                'sort_order' => 4
+            ],
+            [
+                'name' => 'Investments',
+                'icon_key' => 'invest',
+                'color' => '#1ABC9C',
+                'group_id' => $defaultGroup->id,
+                'sort_order' => 5
+            ],
         ];
 
         foreach ($defaultCategories as $category) {

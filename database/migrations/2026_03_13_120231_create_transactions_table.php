@@ -13,27 +13,28 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-
-            // Creates user_id column and sets up a foreign key relation to users table
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('account_id')->constrained()->onDelete('cascade');
 
-            // Transaction category (e.g., 'food', 'salary'), defaults to 'other'
-            $table->foreignId('category_id')->constrained()->onDelete('cascade');
+            // account_id (from) and to_account_id (to) for transfers
+            $table->foreignId('to_account_id')->nullable()->constrained('accounts')->onDelete('set null');
 
-            // Transaction amount: total 10 digits, 2 decimal places (e.g., 99999999.99)
-            $table->decimal('amount', 10, 2);
+            // Categorization
+            $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
 
-            // Transaction description (optional)
+            $table->string('title');
+            $table->decimal('amount', 15, 2);
             $table->string('description')->nullable();
+            $table->enum('type', ['income', 'expense', 'transfer']);
 
-            // Transaction type: 'income' or 'expense'
-            $table->enum('type', ['income', 'expense']);
-
-            // Date of the transaction, defaults to current timestamp
             $table->timestamp('transaction_date')->useCurrent();
-
-            // standard Laravel created_at and updated_at columns
+            $table->boolean('is_favorite')->default(false);
             $table->timestamps();
+
+            // Indexes for performance
+            $table->index(['user_id', 'transaction_date']);
+            $table->index('is_favorite');
         });
     }
 
