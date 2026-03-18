@@ -25,7 +25,7 @@ class AccountController extends Controller
     {
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
-            'type'     => ['required', Rule::in(['cash', 'card', 'savings'])],
+            'type'     => ['required', Rule::in(['cash', 'card', 'savings', 'credit'])],
             'currency' => 'required|string|size:3',
             'balance'  => 'nullable|numeric',
         ]);

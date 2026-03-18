@@ -27,6 +27,16 @@ class Category extends Model
         'sort_order' => 'integer',
     ];
 
+    protected $appends = ['current_spending'];
+
+    public function getCurrentSpendingAttribute(): float
+    {
+        return (float) ($this->transactions()
+            ->whereBetween('transaction_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->where('type', 'expense')
+            ->sum('amount') ?? 0);
+    }
+
     /**
      * Get the user that owns the category.
      */
@@ -44,10 +54,26 @@ class Category extends Model
     }
 
     /**
+     * Get the budgets associated with this category.
+     */
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
+    /**
      * Get the transactions for the category.
      */
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * Get all planned transactions for the category.
+     */
+    public function plannedTransactions(): HasMany
+    {
+        return $this->hasMany(PlannedTransaction::class);
     }
 }

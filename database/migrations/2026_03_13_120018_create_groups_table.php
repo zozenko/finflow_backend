@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('icon_key')->default('home');
+            $table->string('color')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->integer('sort_order')->default(0);
             $table->timestamps();

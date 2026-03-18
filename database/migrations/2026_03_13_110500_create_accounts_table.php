@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('balance', 15, 2)->default(0);
             $table->string('currency', 3)->default('UAH');
-            $table->enum('type', ['cash', 'card', 'savings'])->default('cash');
+            $table->enum('type', ['cash', 'card', 'savings', 'credit'])->default('cash');
             $table->timestamps();
         });
     }

@@ -19,6 +19,10 @@ class Account extends Model
         'type',
     ];
 
+    protected $casts = [
+        'balance' => 'decimal:2',
+    ];
+
     /**
      * Get the user that owns the account.
      */
@@ -32,11 +36,19 @@ class Account extends Model
      */
     public function transactions(): HasMany
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(Transaction::class, 'account_id');
     }
 
     /**
-     * Get transactions where this account is the destination (transfers).
+     * Get all planned transactions linked to this specific account.
+     */
+    public function plannedTransactions(): HasMany
+    {
+        return $this->hasMany(PlannedTransaction::class, 'account_id');
+    }
+
+    /**
+     * Get incoming transfers where this account is the destination (to_account_id).
      */
     public function incomingTransfers(): HasMany
     {
@@ -44,11 +56,19 @@ class Account extends Model
     }
 
     /**
-     * Get transactions where this account is the source for a transfer.
+     * Get outgoing transfers (where type is 'transfer' and this account is the source).
      */
     public function outgoingTransfers(): HasMany
     {
         return $this->hasMany(Transaction::class, 'account_id')
             ->where('type', 'transfer');
+    }
+
+    /**
+     * Get planned incoming transfers where this account is the destination.
+     */
+    public function incomingPlannedTransfers(): HasMany
+    {
+        return $this->hasMany(PlannedTransaction::class, 'to_account_id');
     }
 }

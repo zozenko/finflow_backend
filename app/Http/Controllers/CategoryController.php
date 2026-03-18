@@ -55,14 +55,7 @@ class CategoryController extends Controller
             return response()->json(['message' => 'This category already exists here'], 422);
         }
 
-        $category = Category::create([
-            'name'       => $fields['name'],
-            'icon_key'   => $fields['icon_key'],
-            'color'      => $fields['color'] ?? '#cccccc',
-            'group_id'   => $fields['group_id'],
-            'sort_order' => $fields['sort_order'] ?? 0,
-            'user_id'    => $request->user()->id,
-        ]);
+        $category = $request->user()->categories()->create($fields);
 
         return response()->json($category, 201);
     }

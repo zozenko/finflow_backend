@@ -19,6 +19,7 @@ class Transaction extends Model
         'to_account_id',
         'group_id',
         'category_id',
+        'planned_transaction_id',
         'title',
         'amount',
         'description',
@@ -58,6 +59,14 @@ class Transaction extends Model
     public function toAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'to_account_id');
+    }
+
+    /**
+     * Get the planned transaction that generated this transaction.
+     */
+    public function plannedTransaction(): BelongsTo
+    {
+        return $this->belongsTo(PlannedTransaction::class, 'planned_transaction_id');
     }
 
     /**

@@ -11,53 +11,44 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        // Спершу створюємо дефолтну групу, бо категорії прив'язані до неї
-        $defaultGroup = $user->groups()->create([
-            'name' => 'Default',
-            'icon_key' => 'folder',
-            'color' => '#CCCCCC'
-        ]);
 
-        $defaultCategories = [
+        // 1. Create two base accounts safely
+        $accounts = [
             [
-                'name' => 'Food',
-                'icon_key' => 'food',
-                'color' => '#FF5733',
-                'group_id' => $defaultGroup->id,
-                'sort_order' => 1
+                'name'     => 'Cash',
+                'type'     => 'cash',
+                'currency' => 'UAH',
+                'balance'  => 0,
             ],
             [
-                'name' => 'Pets',
-                'icon_key' => 'pets',
-                'color' => '#FFC300',
-                'group_id' => $defaultGroup->id,
-                'sort_order' => 2
-            ],
-            [
-                'name' => 'Family',
-                'icon_key' => 'family',
-                'color' => '#DAF7A6',
-                'group_id' => $defaultGroup->id,
-                'sort_order' => 3
-            ],
-            [
-                'name' => 'Salary',
-                'icon_key' => 'cash',
-                'color' => '#2ECC71',
-                'group_id' => $defaultGroup->id,
-                'sort_order' => 4
-            ],
-            [
-                'name' => 'Investments',
-                'icon_key' => 'invest',
-                'color' => '#1ABC9C',
-                'group_id' => $defaultGroup->id,
-                'sort_order' => 5
+                'name'     => 'Card',
+                'type'     => 'card',
+                'currency' => 'UAH',
+                'balance'  => 0,
             ],
         ];
 
-        foreach ($defaultCategories as $category) {
-            $user->categories()->create($category);
+        foreach ($accounts as $accountData) {
+            $user->accounts()->updateOrCreate(
+                ['name' => $accountData['name']],
+                $accountData
+            );
+        }
+
+        // 2. Create base groups safely
+        $groups = [
+            ['name' => 'Home',     'icon_key' => 'home',   'sort_order' => 1],
+            ['name' => 'Food',     'icon_key' => 'food',   'sort_order' => 2],
+            ['name' => 'Medicine', 'icon_key' => 'pills',  'sort_order' => 3],
+            ['name' => 'Family',   'icon_key' => 'family', 'sort_order' => 4],
+            ['name' => 'Rest',     'icon_key' => 'games',  'sort_order' => 5],
+        ];
+
+        foreach ($groups as $groupData) {
+            $user->groups()->updateOrCreate(
+                ['name' => $groupData['name']],
+                $groupData
+            );
         }
     }
 
@@ -73,22 +64,6 @@ class UserObserver
      * Handle the User "deleted" event.
      */
     public function deleted(User $user): void
-    {
-        //
-    }
-
-    /**
-     * Handle the User "restored" event.
-     */
-    public function restored(User $user): void
-    {
-        //
-    }
-
-    /**
-     * Handle the User "force deleted" event.
-     */
-    public function forceDeleted(User $user): void
     {
         //
     }

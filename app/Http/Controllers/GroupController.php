@@ -35,12 +35,14 @@ class GroupController extends Controller
                 Rule::unique('groups')->where(fn($q) => $q->where('user_id', $request->user()->id))
             ],
             'icon_key'   => 'nullable|string|max:50',
+            'color'      => 'nullable|string|max:7',
             'sort_order' => 'nullable|integer',
         ]);
 
         $group = $request->user()->groups()->create([
             'name'       => $fields['name'],
             'icon_key'   => $fields['icon_key'] ?? 'home',
+            'color'      => $fields['color'] ?? '#3b82f6',
             'sort_order' => $fields['sort_order'] ?? 0,
         ]);
 
@@ -67,6 +69,7 @@ class GroupController extends Controller
                     ->ignore($group->id)
             ],
             'icon_key'   => 'sometimes|string|max:50',
+            'color'      => 'sometimes|nullable|string|max:7',
             'sort_order' => 'sometimes|required|integer',
         ]);
 

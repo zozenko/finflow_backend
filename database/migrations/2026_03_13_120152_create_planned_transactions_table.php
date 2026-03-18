@@ -11,31 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
+        Schema::create('planned_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+            // Source account (where money comes from)
             $table->foreignId('account_id')->constrained()->onDelete('cascade');
 
-            // account_id (from) and to_account_id (to) for transfers
+            // Destination account (only for transfers, e.g., repaying a loan)
             $table->foreignId('to_account_id')->nullable()->constrained('accounts')->onDelete('set null');
 
-            // Categorization
-            $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
-            $table->foreignId('planned_transaction_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
 
             $table->string('title');
             $table->decimal('amount', 15, 2);
-            $table->string('description')->nullable();
             $table->enum('type', ['income', 'expense', 'transfer']);
 
-            $table->timestamp('transaction_date')->useCurrent();
-            $table->boolean('is_favorite')->default(false);
-            $table->timestamps();
+            // Schedule logic
+            $table->enum('frequency', ['daily', 'weekly', 'monthly', 'yearly']);
+            $table->date('next_payment_date');
 
-            // Indexes for performance
-            $table->index(['user_id', 'transaction_date']);
-            $table->index('is_favorite');
+            $table->boolean('is_active')->default(true);
+            $table->boolean('auto_execute')->default(false); // If true, the system creates the transaction automatically
+
+            $table->timestamps();
         });
     }
 
@@ -44,6 +44,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::dropIfExists('planned_transactions');
     }
 };
