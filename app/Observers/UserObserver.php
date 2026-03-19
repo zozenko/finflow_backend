@@ -37,11 +37,11 @@ class UserObserver
 
         // 2. Create base groups safely
         $groups = [
-            ['name' => 'Home',     'icon_key' => 'home',   'sort_order' => 1],
-            ['name' => 'Food',     'icon_key' => 'food',   'sort_order' => 2],
-            ['name' => 'Medicine', 'icon_key' => 'pills',  'sort_order' => 3],
-            ['name' => 'Family',   'icon_key' => 'family', 'sort_order' => 4],
-            ['name' => 'Rest',     'icon_key' => 'games',  'sort_order' => 5],
+            ['name' => 'Home',     'icon_key' => 'Home',           'sort_order' => 1],
+            ['name' => 'Food',     'icon_key' => 'ShoppingBasket', 'sort_order' => 2],
+            ['name' => 'Medicine', 'icon_key' => 'Pill',           'sort_order' => 3],
+            ['name' => 'Family',   'icon_key' => 'Users',          'sort_order' => 4],
+            ['name' => 'Rest',     'icon_key' => 'Gamepad2',       'sort_order' => 5],
         ];
 
         foreach ($groups as $groupData) {
