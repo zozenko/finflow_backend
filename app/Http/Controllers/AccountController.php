@@ -59,6 +59,7 @@ class AccountController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'type' => ['sometimes', 'required', Rule::in(['cash', 'card', 'savings', 'credit'])],
+            'currency' => 'required|string|size:3',
         ]);
 
         $account->update($validated);
