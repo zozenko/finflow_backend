@@ -27,7 +27,7 @@ class AccountController extends Controller
             'name'     => 'required|string|max:255',
             'type'     => ['required', Rule::in(['cash', 'card', 'savings', 'credit'])],
             'currency' => 'required|string|size:3',
-            'balance'  => 'nullable|numeric',
+            'balance'  => 'numeric',
         ]);
 
         $account = $request->user()->accounts()->create($validated);

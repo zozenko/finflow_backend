@@ -34,6 +34,8 @@ return new class extends Migration
             $table->timestamps();
 
             // Indexes for performance
+            $table->index('category_id');
+            $table->index('account_id');
             $table->index(['user_id', 'transaction_date']);
             $table->index('is_favorite');
         });

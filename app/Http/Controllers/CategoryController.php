@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -10,31 +11,21 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
-
-        $standalone = $user->categories()
-            ->whereNull('group_id')
+        $categories = $request->user()->categories()
             ->orderBy('sort_order', 'asc')
             ->orderBy('name', 'asc')
             ->get();
 
-        $groups = $user->groups()
-            ->with(['categories' => function ($query) {
-                $query->orderBy('sort_order', 'asc')
-                    ->orderBy('name', 'asc');
-            }])
-            ->orderBy('sort_order', 'asc')
-            ->orderBy('name', 'asc')
-            ->get();
-
-        return response()->json([
-            'standalone_categories' => $standalone,
-            'groups' => $groups
-        ]);
+        return response()->json($categories);
     }
 
     public function store(Request $request)
     {
+        // Pre-processing: convert virtual group ID 0 to null for database compatibility
+        if ($request->has('group_id') && $request->group_id == 0) {
+            $request->merge(['group_id' => null]);
+        }
+
         $fields = $request->validate([
             'name'       => 'required|string|max:255',
             'icon_key'   => 'required|string|max:255',
@@ -46,13 +37,26 @@ class CategoryController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $exists = Category::where('user_id', $request->user()->id)
+        // Check for uniqueness within the specific group (considering nullsNotDistinct in migration)
+        $exists = $request->user()->categories()
             ->where('name', $fields['name'])
             ->where('group_id', $fields['group_id'])
             ->exists();
 
         if ($exists) {
             return response()->json(['message' => 'This category already exists here'], 422);
+        }
+
+        // Color inheritance logic: 
+        // If no color is provided, inherit from group or use default
+        if (empty($fields['color'])) {
+            if ($fields['group_id']) {
+                // Fetch the group to inherit its color
+                $group = Group::find($fields['group_id']);
+                $fields['color'] = $group ? $group->color : '#9e9e9e';
+            } else {
+                $fields['color'] = '#9e9e9e';
+            }
         }
 
         $category = $request->user()->categories()->create($fields);
@@ -64,6 +68,11 @@ class CategoryController extends Controller
     {
         if ($category->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Pre-processing: convert virtual group ID 0 to null to allow moving to standalone
+        if ($request->has('group_id') && $request->group_id == 0) {
+            $request->merge(['group_id' => null]);
         }
 
         $fields = $request->validate([

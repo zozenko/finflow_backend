@@ -15,7 +15,6 @@ class GroupController extends Controller
     {
         return response()->json(
             $request->user()->groups()
-                ->withCount('categories')
                 ->orderBy('sort_order', 'asc')
                 ->orderBy('name', 'asc')
                 ->get()

@@ -18,7 +18,6 @@ class TransactionController extends Controller
     {
         $transactions = $request->user()
             ->transactions()
-            ->with(['category', 'group', 'account', 'toAccount'])
             ->orderBy('transaction_date', 'desc')
             ->get();
 

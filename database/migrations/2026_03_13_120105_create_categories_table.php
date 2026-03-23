@@ -20,7 +20,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            $table->unique(['name', 'user_id', 'group_id']);
+            $table->unique(['name', 'user_id', 'group_id'], 'cat_unique_index')
+                ->nullsNotDistinct();
         });
     }
 

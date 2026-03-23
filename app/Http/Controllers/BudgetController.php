@@ -16,7 +16,6 @@ class BudgetController extends Controller
     {
         $budgets = $request->user()
             ->budgets()
-            ->with(['category', 'group'])
             ->orderBy('start_date', 'desc')
             ->get();
 

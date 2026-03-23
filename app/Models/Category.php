@@ -15,27 +15,17 @@ class Category extends Model
      * The attributes that are mass assignable.
      */
     protected $fillable = [
+        'user_id',
         'name',
         'icon_key',
         'color',
         'group_id',
-        'user_id',
         'sort_order',
     ];
 
     protected $casts = [
         'sort_order' => 'integer',
     ];
-
-    protected $appends = ['current_spending'];
-
-    public function getCurrentSpendingAttribute(): float
-    {
-        return (float) ($this->transactions()
-            ->whereBetween('transaction_date', [now()->startOfMonth(), now()->endOfMonth()])
-            ->where('type', 'expense')
-            ->sum('amount') ?? 0);
-    }
 
     /**
      * Get the user that owns the category.

@@ -17,7 +17,6 @@ class PlannedTransactionController extends Controller
     {
         $planned = $request->user()
             ->plannedTransactions()
-            ->with(['category', 'group', 'account', 'toAccount'])
             ->orderBy('next_payment_date', 'asc')
             ->get();
 
