@@ -11,17 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
+        Schema::create('groups', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('icon_key');
-            $table->string('color', 7)->nullable();
-            $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('icon_key')->default('home');
+            $table->string('color')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            $table->unique(['name', 'user_id', 'group_id'], 'cat_unique_index')
-                ->nullsNotDistinct();
+            $table->unique(['name', 'user_id']);
         });
     }
 
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::dropIfExists('groups');
     }
 };

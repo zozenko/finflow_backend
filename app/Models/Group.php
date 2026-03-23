@@ -7,28 +7,34 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Category extends Model
+class Group extends Model
 {
     use HasFactory;
 
     /**
      * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
      */
     protected $fillable = [
         'user_id',
         'name',
         'icon_key',
         'color',
-        'group_id',
         'sort_order',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'sort_order' => 'integer',
     ];
 
     /**
-     * Get the user that owns the category.
+     * Get the user that owns the group.
      */
     public function user(): BelongsTo
     {
@@ -36,23 +42,23 @@ class Category extends Model
     }
 
     /**
-     * Get the group that this category belongs to.
+     * Get the categories associated with this group.
      */
-    public function group(): BelongsTo
+    public function categories(): HasMany
     {
-        return $this->belongsTo(Group::class);
+        return $this->hasMany(Category::class);
     }
 
     /**
-     * Get the budgets associated with this category.
+     * Get all of the budgets for the Group.
      */
-    public function budgets(): HasMany
+    public function budgets()
     {
         return $this->hasMany(Budget::class);
     }
 
     /**
-     * Get the transactions for the category.
+     * Get all real transactions associated with this group.
      */
     public function transactions(): HasMany
     {
@@ -60,7 +66,7 @@ class Category extends Model
     }
 
     /**
-     * Get all planned transactions for the category.
+     * Get all planned transactions associated with this group.
      */
     public function plannedTransactions(): HasMany
     {

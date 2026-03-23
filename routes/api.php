@@ -5,28 +5,43 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\GroupController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\PlannedTransactionController;
+use App\Http\Controllers\BudgetController;
 
+// Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes (Only for authenticated users)
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Get current user profile
+    /**
+     * Get the authenticated user's profile
+     */
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Transaction routes: fetch all for user and create new ones
-    Route::get('/transactions', [TransactionController::class, 'index']);
-    Route::post('/transactions', [TransactionController::class, 'store']);
-    Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
+    /**
+     * Resourceful routes for Groups, Categories, and Transactions
+     * Each handles: index, store, show, update, destroy
+     */
+    Route::apiResource('accounts', AccountController::class);
+    Route::apiResource('groups', GroupController::class);
+    Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('budgets', BudgetController::class);
+    Route::apiResource('transactions', TransactionController::class);
+    Route::apiResource('planned-transactions', PlannedTransactionController::class);
 
-    // Category routes: fetch list of categories and create new ones
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+    /**
+     * Custom route to quickly toggle the favorite status of a transaction
+     */
+    Route::patch('/transactions/{transaction}/toggle-favorite', [TransactionController::class, 'toggleFavorite']);
 
-    // Logout route to revoke the token
+    /**
+     * User logout
+     */
     Route::post('/logout', [AuthController::class, 'logout']);
 });
