@@ -35,8 +35,21 @@ class UserObserver
             );
         }
 
-        // 2. Create base groups safely
-        $groups = [
+        // 2. Create the base group and store the object to get its real ID
+        $groupData = [
+            'name'       => 'General',
+            'icon_key'   => 'Home',
+            'sort_order' => 1,
+            'color'      => '#10B981'
+        ];
+
+        $standardGroup = $user->groups()->updateOrCreate(
+            ['name' => $groupData['name']],
+            $groupData
+        );
+
+        // 3. Create base categories using the dynamic group_id
+        $categories = [
             ['name' => 'Home',     'icon_key' => 'Home',           'sort_order' => 1, 'color' => '#10B981'],
             ['name' => 'Food',     'icon_key' => 'ShoppingBasket', 'sort_order' => 2, 'color' => '#F59E0B'],
             ['name' => 'Medicine', 'icon_key' => 'Pill',           'sort_order' => 3, 'color' => '#EF4444'],
@@ -44,10 +57,10 @@ class UserObserver
             ['name' => 'Rest',     'icon_key' => 'Gamepad2',       'sort_order' => 5, 'color' => '#8B5CF6'],
         ];
 
-        foreach ($groups as $groupData) {
-            $user->groups()->updateOrCreate(
-                ['name' => $groupData['name']],
-                $groupData
+        foreach ($categories as $categoryData) {
+            $user->categories()->updateOrCreate(
+                ['name' => $categoryData['name']],
+                array_merge($categoryData, ['group_id' => $standardGroup->id])
             );
         }
     }
