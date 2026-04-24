@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
@@ -19,6 +20,18 @@ class TransactionController extends Controller
         $transactions = $request->user()
             ->transactions()
             ->orderBy('transaction_date', 'desc')
+            ->paginate(20);
+
+        return response()->json($transactions);
+    }
+
+    public function recent(Request $request): JsonResponse
+    {
+        $transactions = $request->user()
+            ->transactions()
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->take(5)
             ->get();
 
         return response()->json($transactions);
@@ -126,6 +139,95 @@ class TransactionController extends Controller
         $transaction->update(['is_favorite' => !$transaction->is_favorite]);
 
         return response()->json(['is_favorite' => $transaction->is_favorite]);
+    }
+
+    public function sumByGroups(Request $request): JsonResponse
+    {
+        try {
+            $dateFrom = $request->has('date_from')
+                ? Carbon::parse($request->query('date_from'))->startOfDay()
+                : Carbon::now()->startOfMonth();
+
+            $dateTo = $request->has('date_to')
+                ? Carbon::parse($request->query('date_to'))->endOfDay()
+                : Carbon::now()->endOfMonth();
+        } catch (\Exception $e) {
+            $dateFrom = Carbon::now()->startOfMonth();
+            $dateTo = Carbon::now()->endOfMonth();
+        }
+
+        $query = $request->user()->transactions()
+            ->where('type', $request->query('type', 'expense'))
+            ->whereBetween('transaction_date', [$dateFrom, $dateTo])
+            ->when($request->query('account_id'), function ($q, $id) {
+                return $q->where('account_id', $id);
+            });
+
+        $stats = $query->selectRaw('group_id, SUM(amount) as total')
+            ->whereNotNull('group_id')
+            ->groupBy('group_id')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn($item) => [
+                'groupId' => (int) $item->group_id,
+                'amount'  => (float) round($item->total, 2),
+            ]);
+
+        return response()->json([
+            'period' => [
+                'from' => $dateFrom->toDateTimeString(),
+                'to'   => $dateTo->toDateTimeString()
+            ],
+            'stats' => $stats
+        ]);
+    }
+
+    public function sumByCategories(Request $request): JsonResponse
+    {
+        if (!$request->has('group_id')) {
+            return response()->json([
+                'error' => 'Group ID is required to avoid data "muddle"',
+                'stats' => []
+            ], 422);
+        }
+
+        try {
+            $dateFrom = $request->query('date_from')
+                ? Carbon::parse($request->query('date_from'))->startOfDay()
+                : Carbon::now()->startOfMonth();
+
+            $dateTo = $request->query('date_to')
+                ? Carbon::parse($request->query('date_to'))->endOfDay()
+                : Carbon::now()->endOfMonth();
+        } catch (\Exception $e) {
+            $dateFrom = Carbon::now()->startOfMonth();
+            $dateTo = Carbon::now()->endOfMonth();
+        }
+
+        $stats = $request->user()->transactions()
+            ->where('group_id', $request->query('group_id'))
+            ->where('type', $request->query('type', 'expense'))
+            ->whereBetween('transaction_date', [$dateFrom, $dateTo])
+            ->when($request->query('account_id'), function ($q, $id) {
+                return $q->where('account_id', $id);
+            })
+            ->selectRaw('category_id, SUM(amount) as total')
+            ->whereNotNull('category_id')
+            ->groupBy('category_id')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn($item) => [
+                'categoryId' => (int) $item->category_id,
+                'amount'     => (float) round($item->total, 2),
+            ]);
+
+        return response()->json([
+            'period' => [
+                'from' => $dateFrom->toDateTimeString(),
+                'to' => $dateTo->toDateTimeString(),
+            ],
+            'stats' => $stats
+        ]);
     }
 
     /**
