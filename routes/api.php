@@ -26,7 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/transactions/recent', [TransactionController::class, 'recent']);
     Route::get('/transactions/sum-by-groups', [TransactionController::class, 'sumByGroups']);
-    Route::get('/transactions/sum-by-сategories', [TransactionController::class, 'sumByCategories']);
+    Route::get('/transactions/sum-by-categories', [TransactionController::class, 'sumByCategories']);
     /**
      * Resourceful routes for Groups, Categories, and Transactions
      * Each handles: index, store, show, update, destroy
