@@ -14,7 +14,7 @@ class AccountController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $accounts = $request->user()->accounts()->get();
+        $accounts = $request->user()->accounts()->orderBy('name', 'asc')->get();
         return response()->json($accounts);
     }
 
@@ -76,11 +76,24 @@ class AccountController extends Controller
             abort(403);
         }
 
-        // Logic: Forbid deletion if the balance is not zero
-        if ((float) $account->balance !== 0.0) {
+        $accountCount = $request->user()->accounts()->count();
+        if ($accountCount <= 1) {
             return response()->json([
-                'message' => 'Cannot delete an account with a non-zero balance. Please transfer funds first.'
-            ], 400);
+                'message' => 'Cannot delete the last account.'
+            ], 422);
+        }
+
+        $fields = $request->validate([
+            'reassign_to_account_id' => [
+                'nullable',
+                Rule::exists('accounts', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id)),
+            ],
+        ]);
+
+        if (!empty($fields['reassign_to_account_id'])) {
+            $target = Account::find($fields['reassign_to_account_id']);
+            $account->transactions()->update(['account_id' => $target->id]);
+            $target->increment('balance', $account->balance);
         }
 
         $account->delete();

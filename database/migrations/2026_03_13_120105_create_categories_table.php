@@ -16,12 +16,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('icon_key');
             $table->string('color', 7)->nullable();
-            $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('group_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            $table->unique(['name', 'user_id', 'group_id'], 'cat_unique_index')
-                ->nullsNotDistinct();
+            $table->unique(['name', 'user_id', 'group_id'], 'cat_unique_index');
         });
     }
 

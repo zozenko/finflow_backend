@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Transaction extends Model
 {
@@ -26,6 +27,7 @@ class Transaction extends Model
         'type',
         'transaction_date',
         'is_favorite',
+        'parent_id',
     ];
 
     /**
@@ -83,5 +85,15 @@ class Transaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'parent_id');
+    }
+
+    public function child(): HasOne
+    {
+        return $this->hasOne(Transaction::class, 'parent_id');
     }
 }

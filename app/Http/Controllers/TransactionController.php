@@ -17,10 +17,15 @@ class TransactionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $perPage = $request->query('per_page', 10);
+        $sortBy = $request->query('sort_by', 'transaction_date');
+        $sortDir = $request->query('sort_dir', 'desc');
+
         $transactions = $request->user()
             ->transactions()
+            ->orderBy($sortBy, $sortDir)
             ->orderBy('transaction_date', 'desc')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json($transactions);
     }
@@ -35,6 +40,15 @@ class TransactionController extends Controller
             ->get();
 
         return response()->json($transactions);
+    }
+
+    public function show(Request $request, Transaction $transaction): JsonResponse
+    {
+        if ($transaction->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json($transaction);
     }
 
     /**
@@ -72,21 +86,36 @@ class TransactionController extends Controller
             $groupId = $category?->group_id;
         }
 
+        $isTransfer = $fields['type'] === 'transfer';
+
         $transaction = $request->user()->transactions()->create([
             'title'                  => $fields['title'],
             'amount'                 => $fields['amount'],
             'type'                   => $fields['type'],
             'account_id'             => $fields['account_id'],
             'to_account_id'          => $fields['to_account_id'] ?? null,
-            'category_id'            => $fields['category_id'] ?? null,
-            'group_id'               => $groupId,
+            'category_id'            => $isTransfer ? null : ($fields['category_id'] ?? null),
+            'group_id'               => $isTransfer ? null : $groupId,
             'planned_transaction_id' => $fields['planned_transaction_id'] ?? null,
             'description'            => $fields['description'] ?? null,
             'transaction_date'       => $fields['transaction_date'] ?? now(),
             'is_favorite'            => $fields['is_favorite'] ?? false,
         ]);
 
-        return response()->json($transaction->load(['category', 'group', 'account', 'toAccount']), 201);
+        if ($transaction->type === 'transfer' && !empty($fields['to_account_id'])) {
+            $request->user()->transactions()->create([
+                'parent_id'        => $transaction->id,
+                'title'            => $transaction->title,
+                'amount'           => $transaction->amount,
+                'type'             => 'transfer',
+                'account_id'       => $fields['to_account_id'],
+                'transaction_date' => $transaction->transaction_date,
+                'description'      => $transaction->description,
+                'is_favorite'      => false,
+            ]);
+        }
+
+        return response()->json($transaction, 201);
     }
 
     /**
@@ -98,6 +127,11 @@ class TransactionController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        // Redirect child transaction editing to its parent
+        if ($transaction->parent_id) {
+            $transaction = Transaction::findOrFail($transaction->parent_id);
+        }
+
         $fields = $request->validate([
             'title'            => 'sometimes|required|string|max:255',
             'amount'           => 'sometimes|required|numeric',
@@ -105,6 +139,10 @@ class TransactionController extends Controller
             'account_id'       => [
                 'sometimes',
                 'required',
+                Rule::exists('accounts', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id))
+            ],
+            'to_account_id'    => [
+                'nullable',
                 Rule::exists('accounts', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id))
             ],
             'category_id'      => [
@@ -122,9 +160,47 @@ class TransactionController extends Controller
                 : null;
         }
 
+        $wasTransfer = $transaction->type === 'transfer';
+        $isTransfer  = ($fields['type'] ?? $transaction->type) === 'transfer';
+
+        if ($isTransfer) {
+            $fields['category_id'] = null;
+            $fields['group_id']    = null;
+        }
+
         $transaction->update($fields);
 
-        return response()->json($transaction->load(['category', 'group', 'account', 'toAccount']));
+        if ($wasTransfer && !$isTransfer) {
+            // Type changed from transfer — remove child
+            $transaction->child?->delete();
+        } elseif (!$wasTransfer && $isTransfer && !empty($fields['to_account_id'])) {
+            // Type changed to transfer — create child
+            $request->user()->transactions()->create([
+                'parent_id'        => $transaction->id,
+                'title'            => $transaction->title,
+                'amount'           => $transaction->amount,
+                'type'             => 'transfer',
+                'account_id'       => $fields['to_account_id'],
+                'transaction_date' => $transaction->transaction_date,
+                'description'      => $transaction->description,
+                'is_favorite'      => false,
+            ]);
+        } elseif ($wasTransfer && $isTransfer && $transaction->child) {
+            // Still transfer — sync child fields
+            $childData = array_filter([
+                'title'            => $fields['title'] ?? null,
+                'amount'           => $fields['amount'] ?? null,
+                'transaction_date' => $fields['transaction_date'] ?? null,
+                'description'      => $fields['description'] ?? null,
+                'account_id'       => $fields['to_account_id'] ?? null,
+            ], fn($v) => $v !== null);
+
+            if (!empty($childData)) {
+                $transaction->child->update($childData);
+            }
+        }
+
+        return response()->json($transaction);
     }
 
     /**
@@ -141,20 +217,40 @@ class TransactionController extends Controller
         return response()->json(['is_favorite' => $transaction->is_favorite]);
     }
 
-    public function sumByGroups(Request $request): JsonResponse
+    private function getPeriod(Request $request): array
     {
+        $period = $request->query('period');
+
+        if ($period) {
+            return match ($period) {
+                'today'         => [Carbon::today(), Carbon::today()->endOfDay()],
+                'current_week'  => [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()],
+                'current_month' => [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()],
+                'last_7_days'   => [Carbon::now()->subDays(6)->startOfDay(), Carbon::now()->endOfDay()],
+                'last_30_days'  => [Carbon::now()->subDays(29)->startOfDay(), Carbon::now()->endOfDay()],
+                default         => [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()],
+            };
+        }
+
         try {
-            $dateFrom = $request->has('date_from')
+            $from = $request->query('date_from')
                 ? Carbon::parse($request->query('date_from'))->startOfDay()
                 : Carbon::now()->startOfMonth();
 
-            $dateTo = $request->has('date_to')
+            $to = $request->query('date_to')
                 ? Carbon::parse($request->query('date_to'))->endOfDay()
                 : Carbon::now()->endOfMonth();
         } catch (\Exception $e) {
-            $dateFrom = Carbon::now()->startOfMonth();
-            $dateTo = Carbon::now()->endOfMonth();
+            $from = Carbon::now()->startOfMonth();
+            $to = Carbon::now()->endOfMonth();
         }
+
+        return [$from, $to];
+    }
+
+    public function sumByGroups(Request $request): JsonResponse
+    {
+        [$dateFrom, $dateTo] = $this->getPeriod($request);
 
         $query = $request->user()->transactions()
             ->where('type', $request->query('type', 'expense'))
@@ -191,18 +287,7 @@ class TransactionController extends Controller
             ], 422);
         }
 
-        try {
-            $dateFrom = $request->query('date_from')
-                ? Carbon::parse($request->query('date_from'))->startOfDay()
-                : Carbon::now()->startOfMonth();
-
-            $dateTo = $request->query('date_to')
-                ? Carbon::parse($request->query('date_to'))->endOfDay()
-                : Carbon::now()->endOfMonth();
-        } catch (\Exception $e) {
-            $dateFrom = Carbon::now()->startOfMonth();
-            $dateTo = Carbon::now()->endOfMonth();
-        }
+        [$dateFrom, $dateTo] = $this->getPeriod($request);
 
         $stats = $request->user()->transactions()
             ->where('group_id', $request->query('group_id'))
@@ -237,6 +322,11 @@ class TransactionController extends Controller
     {
         if ($transaction->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Deleting a child redirects to parent (child is removed via cascade)
+        if ($transaction->parent_id) {
+            $transaction = Transaction::findOrFail($transaction->parent_id);
         }
 
         $transaction->delete();
