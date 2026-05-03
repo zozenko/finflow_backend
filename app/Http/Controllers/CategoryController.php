@@ -21,23 +21,17 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
-        // Pre-processing: convert virtual group ID 0 to null for database compatibility
-        if ($request->has('group_id') && $request->group_id == 0) {
-            $request->merge(['group_id' => null]);
-        }
-
         $fields = $request->validate([
             'name'       => 'required|string|max:255',
             'icon_key'   => 'required|string|max:255',
             'color'      => 'nullable|string|max:7',
             'group_id'   => [
-                'nullable',
+                'required',
                 Rule::exists('groups', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id))
             ],
             'sort_order' => 'nullable|integer',
         ]);
 
-        // Check for uniqueness within the specific group (considering nullsNotDistinct in migration)
         $exists = $request->user()->categories()
             ->where('name', $fields['name'])
             ->where('group_id', $fields['group_id'])
@@ -47,16 +41,9 @@ class CategoryController extends Controller
             return response()->json(['message' => 'This category already exists here'], 422);
         }
 
-        // Color inheritance logic: 
-        // If no color is provided, inherit from group or use default
         if (empty($fields['color'])) {
-            if ($fields['group_id']) {
-                // Fetch the group to inherit its color
-                $group = Group::find($fields['group_id']);
-                $fields['color'] = $group ? $group->color : '#9e9e9e';
-            } else {
-                $fields['color'] = '#9e9e9e';
-            }
+            $group = Group::find($fields['group_id']);
+            $fields['color'] = $group->color;
         }
 
         $category = $request->user()->categories()->create($fields);
@@ -70,11 +57,6 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Pre-processing: convert virtual group ID 0 to null to allow moving to standalone
-        if ($request->has('group_id') && $request->group_id == 0) {
-            $request->merge(['group_id' => null]);
-        }
-
         $fields = $request->validate([
             'name'       => 'sometimes|required|string|max:255',
             'icon_key'   => 'sometimes|required|string|max:255',
@@ -82,10 +64,14 @@ class CategoryController extends Controller
             'sort_order' => 'sometimes|required|integer',
             'group_id'   => [
                 'sometimes',
-                'nullable',
+                'required',
                 Rule::exists('groups', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id))
             ],
         ]);
+
+        if (array_key_exists('group_id', $fields) && $fields['group_id'] !== $category->group_id) {
+            $category->transactions()->update(['group_id' => $fields['group_id']]);
+        }
 
         $category->update($fields);
 
@@ -107,7 +93,28 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $fields = $request->validate([
+            'reassign_to_category_id' => [
+                'nullable',
+                Rule::exists('categories', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id)),
+            ],
+        ]);
+
+        if (!empty($fields['reassign_to_category_id'])) {
+            $target = Category::find($fields['reassign_to_category_id']);
+            $category->transactions()->update([
+                'category_id' => $target->id,
+                'group_id'    => $target->group_id,
+            ]);
+        } else {
+            $category->transactions()->update([
+                'category_id' => null,
+                'group_id'    => null
+            ]);
+        }
+
         $category->delete();
+
         return response()->json(['message' => 'Category deleted']);
     }
 }

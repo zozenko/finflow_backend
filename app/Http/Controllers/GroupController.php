@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Group;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class GroupController extends Controller
@@ -84,6 +85,39 @@ class GroupController extends Controller
     {
         if ($group->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $fields = $request->validate([
+            'reassign_to_group_id' => [
+                'nullable',
+                Rule::exists('groups', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id)),
+            ],
+        ]);
+
+        if (!empty($fields['reassign_to_group_id'])) {
+            $targetGroup = Group::find($fields['reassign_to_group_id']);
+
+            $existingNames = $targetGroup->categories()
+                ->pluck('name')
+                ->map(fn($n) => mb_strtolower($n))
+                ->all();
+
+            DB::transaction(function () use ($group, $targetGroup, $existingNames) {
+                foreach ($group->categories as $category) {
+                    $newName = $category->name;
+
+                    if (in_array(mb_strtolower($newName), $existingNames)) {
+                        $newName = $newName . ' (from: ' . $group->name . ')';
+                    }
+
+                    $category->update([
+                        'name'     => $newName,
+                        'group_id' => $targetGroup->id,
+                    ]);
+
+                    $category->transactions()->update(['group_id' => $targetGroup->id]);
+                }
+            });
         }
 
         $group->delete();

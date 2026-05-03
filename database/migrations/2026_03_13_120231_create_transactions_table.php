@@ -23,6 +23,7 @@ return new class extends Migration
             $table->foreignId('group_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('category_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('planned_transaction_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('parent_id')->nullable()->constrained('transactions')->onDelete('cascade');
 
             $table->string('title');
             $table->decimal('amount', 15, 2);

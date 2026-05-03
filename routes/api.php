@@ -24,6 +24,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
+    Route::get('/transactions/recent', [TransactionController::class, 'recent']);
+    Route::get('/transactions/sum-by-groups', [TransactionController::class, 'sumByGroups']);
+    Route::get('/transactions/sum-by-categories', [TransactionController::class, 'sumByCategories']);
     /**
      * Resourceful routes for Groups, Categories, and Transactions
      * Each handles: index, store, show, update, destroy
@@ -39,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
      * Custom route to quickly toggle the favorite status of a transaction
      */
     Route::patch('/transactions/{transaction}/toggle-favorite', [TransactionController::class, 'toggleFavorite']);
+
 
     /**
      * User logout
