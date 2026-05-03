@@ -1,0 +1,40 @@
+services:
+  # Backend: Laravel (PHP 8.3)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finflow-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    networks:
+      - finflow-network
+
+  # Database: PostgreSQL 16
+  db:
+    image: postgres:16-alpine
+    container_name: finflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-finflow}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - finflow-network
+
+networks:
+  finflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
