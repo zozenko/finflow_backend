@@ -6,6 +6,7 @@ use App\Models\Account;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class AccountController extends Controller
 {
@@ -86,17 +87,21 @@ class AccountController extends Controller
         $fields = $request->validate([
             'reassign_to_account_id' => [
                 'nullable',
-                Rule::exists('accounts', 'id')->where(fn($q) => $q->where('user_id', $request->user()->id)),
+                Rule::exists('accounts', 'id')->where(function ($query) use ($request, $account) {
+                    return $query->where('user_id', $request->user()->id)
+                        ->where('id', '!=', $account->id);
+                }),
             ],
         ]);
 
-        if (!empty($fields['reassign_to_account_id'])) {
-            $target = Account::find($fields['reassign_to_account_id']);
-            $account->transactions()->update(['account_id' => $target->id]);
-            $target->increment('balance', $account->balance);
-        }
-
-        $account->delete();
+        DB::transaction(function () use ($account, $fields) {
+            if (!empty($fields['reassign_to_account_id'])) {
+                $target = Account::find($fields['reassign_to_account_id']);
+                $account->transactions()->update(['account_id' => $target->id]);
+                $target->increment('balance', $account->balance);
+            }
+            $account->delete();
+        });
 
         return response()->json(null, 204);
     }
