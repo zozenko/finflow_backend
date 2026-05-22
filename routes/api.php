@@ -9,6 +9,7 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\PlannedTransactionController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\InvestmentController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -37,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('budgets', BudgetController::class);
     Route::apiResource('transactions', TransactionController::class);
     Route::apiResource('planned-transactions', PlannedTransactionController::class);
+    Route::apiResource('investments', InvestmentController::class);
 
     /**
      * Custom route to quickly toggle the favorite status of a transaction

@@ -98,4 +98,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(PlannedTransaction::class);
     }
+
+    /**
+     * Get all investments owned by the user.
+     */
+    public function investments(): HasMany
+    {
+        return $this->hasMany(Investment::class);
+    }
 }

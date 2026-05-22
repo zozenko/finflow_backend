@@ -15,14 +15,18 @@ class TransactionBalanceTest extends TestCase
     {
         $this->withoutExceptionHandling();
 
-        // 1. Create a user (UserObserver automatically creates 'Card', 'Cash', and 5 Groups)
+        // 1. Create a user
         $user = User::factory()->create();
 
-        // 2. Retrieve the auto-created 'Card' account and 'Food' group
-        $cardAccount = $user->accounts()->where('name', 'Card')->first();
-        $foodGroup = $user->groups()->where('name', 'Food')->first();
+        // 2. Retrieve the auto-created 'Card' account or create it if missing
+        $cardAccount = $user->accounts()->where('name', 'Card')->first()
+            ?? \App\Models\Account::factory()->create(['user_id' => $user->id, 'name' => 'Card', 'balance' => 0]);
 
-        // 3. Since the observer doesn't create categories, we create one for the test
+        // Гарантовано отримуємо або створюємо групу 'Food' для цього юзера
+        $foodGroup = $user->groups()->where('name', 'Food')->first()
+            ?? \App\Models\Group::factory()->create(['user_id' => $user->id, 'name' => 'Food']);
+
+        // 3. Create a category linked to our guaranteed group
         $category = Category::factory()->create([
             'user_id'  => $user->id,
             'group_id' => $foodGroup->id,
@@ -43,7 +47,6 @@ class TransactionBalanceTest extends TestCase
         $response->assertStatus(201);
 
         // Assert balance: 0 - 750.50 = -750.50
-        // We use fresh() to get the updated balance from the database
         $this->assertEquals(-750.50, $cardAccount->fresh()->balance);
 
         // Check if the transaction exists in the database
