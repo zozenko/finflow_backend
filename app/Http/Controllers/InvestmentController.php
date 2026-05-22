@@ -22,6 +22,7 @@ class InvestmentController extends Controller
             ->when($validated['type'] ?? null, function ($query, $type) {
                 return $query->where('type', $type);
             })
+            ->orderBy('purchase_date', 'desc')
             ->get();
 
         return response()->json($investments);
