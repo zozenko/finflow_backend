@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->enum('type', ['crypto', 'stocks', 'bonds', 'etf', 'fiat'])->default('fiat');
             $table->decimal('quantity', 16, 8)->default(0);
-            $table->date('purchase_date')->useCurrent();
+            $table->timestamp('purchase_date')->useCurrent();
             $table->timestamps();
         });
     }
