@@ -17,7 +17,7 @@ class Investment extends Model
 
     protected $casts = [
         'quantity' => 'decimal:8',
-        'purchase_date' => 'date',
+        'purchase_date' => 'datetime',
     ];
 
     public function user(): BelongsTo
